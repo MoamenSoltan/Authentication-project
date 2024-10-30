@@ -2,12 +2,11 @@ import { User } from "../models/user.model.js"
 import bcryptjs from  "bcryptjs"
 import { generateVerificationCode } from "../utils/generateVerificationCode.js"
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js"
-
-
+import {sendVerificationEmail, sendWelcomeEmail} from "../mailtrap/emails.js"
 
 export const signup = async (req, res) => {
     //use postman
-    const {email,password,name}=req.body
+    const {email,password,name}=req.body//this is what will be sent by front end (also used in postman)
 
    try {
     if (!email || !password || !name) {
@@ -55,6 +54,11 @@ export const signup = async (req, res) => {
 
    generateTokenAndSetCookie(res,user._id)//_id this is how mongoDB stores ids
 
+
+   //now we can send a verification email
+   await sendVerificationEmail(user.email, verificationToken)
+
+
    //next step is to prepare the response back to client
    res.status(201).json({
     success: true,
@@ -75,6 +79,51 @@ export const signup = async (req, res) => {
 
    }
 }//async
+
+export const verifyEmail = async (req,res) =>{
+    //first we need the code the user received from our email 
+    const {code}=req.body//needed in front and postman
+    // imagine the front end , after pressing a button after typing the code , a request would be sent to this endpoint , in its body , there is the code , we destructure it here 
+
+    try {//template is async try (await inside try for any thing db related or a promise ) catch
+
+        const user = await User.findOne({
+            verificationToken:code,
+            verificationTokenExpiresAt: {$gte: Date.now()}})
+            //$gte is used in mongodb ,explanation below
+            //verificationTokenExpiresAt is a date field , and we are checking if it is greater than or equal to current date
+
+            if (!user) {
+                throw new Error("Invalid or expired Verification Code")
+            }
+            //now that we found a user with such credentials , we update the is verified value , and remove the verification token and its expiration date, 
+            //verification steps : 1- create a token upon signup , store it with it expiration date in db, 2- upon signup in backend an email is sent containing code , in front in upon sign up , route to verification page 3- user checks his email for the code  the backend sent, types in the page of verification , sending a requesto to verify-email endpoint , 4- backend checks for matching codes , if valid  , updates the user document in db , and removes the verification token and its expiration date .
+            user.isVerified=true;
+
+            user.verificationToken=undefined//clears value associated with the key
+            user.verificationTokenExpiresAt=undefined
+
+            await user.save()//update the values
+            // now that the user is verified , we can send a welcome email
+
+            await sendWelcomeEmail(user.email,user.name)
+
+            //very important : dont forget to return a response , otherwise postman is stuck meaning api isnt functioning properly 
+            res.status(200).json({success: true, message: "Email verified successfully",
+                user:{//obj
+                    ...user._doc,
+                    password:undefined
+                }
+            })
+        }
+
+
+    
+    catch (error) {
+        return res.status(400).json({success: false, message: error.message})//in the controller functions a must prepare a response , either success or failure , this is the last step
+    }
+
+}
 
 export const login = async (req, res) => {
     res.send("login page");
@@ -122,4 +171,21 @@ Awaiting events that return Promises.
 Example: const result = await new Promise(resolve => someEventEmitter.on('event', resolve));
 Conclusion:
 Use await with any asynchronous operation that returns a Promise to improve readability and manage asynchronous code effectively.
+ */
+
+/**
+ * Definition: $gte stands for "greater than or equal to" and is a comparison operator used in MongoDB queries.
+
+Purpose: It allows you to filter documents based on whether a specified field's value is greater than or equal to a given value.
+
+Syntax: The general format for using $gte in a query is:
+
+javascript
+
+Verify
+Edit
+Copy code
+{
+    fieldName: { $gte: value }
+}
  */
