@@ -1,9 +1,11 @@
 // const express = require('express');
-//type module in pakage.json    
+//type module in pakage.json   
+//notes : use diagrams to explain flow of api calls 
 import express from 'express';
 import { connectDB } from './DB/connectDB.js';
 //dont forget .js for connedctDB because its a local file
 import authRoutes from './routes/auth.route.js';
+import cookieParser from 'cookie-parser';
 
 import dotenv from 'dotenv';
 dotenv.config()
@@ -18,6 +20,7 @@ dotenv.config()
  //use npm run dev 
 
  app.use(express.json())//allow us to parse the incoming requests with json payloads , : req.body
+ app.use(cookieParser())// to parse the cookies that are sent by the client with each request
  app.use("/api/auth",authRoutes)
   //this line means that we prefex all our routes from authRoutes with /api/auth
 

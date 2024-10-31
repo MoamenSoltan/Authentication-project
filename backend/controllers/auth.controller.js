@@ -2,7 +2,20 @@ import { User } from "../models/user.model.js"
 import bcryptjs from  "bcryptjs"
 import { generateVerificationCode } from "../utils/generateVerificationCode.js"
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js"
-import {sendVerificationEmail, sendWelcomeEmail} from "../mailtrap/emails.js"
+import {sendVerificationEmail, sendWelcomeEmail,sendPasswordResetEmail,sendResetSuccessEmail} from "../mailtrap/emails.js"
+import dotenv from "dotenv"
+import crypto from "crypto"
+
+dotenv.config()
+
+/**
+ * 
+ key notes : 
+ 1- controller functions are async, with req and res as parameters 
+ 2- destructure data at the beginning 
+ 3- try(logic) and catch (errors - could be thrown in a catch of a another function inside)
+ 4- prepare response at the end of try in case of success , prepare response in catch in case of failure 
+ */
 
 export const signup = async (req, res) => {
     //use postman
@@ -56,7 +69,7 @@ export const signup = async (req, res) => {
 
 
    //now we can send a verification email
-   await sendVerificationEmail(user.email, verificationToken)
+   await sendVerificationEmail(user.email, verificationToken)//throws an error in catch , handled below
 
 
    //next step is to prepare the response back to client
@@ -125,12 +138,133 @@ export const verifyEmail = async (req,res) =>{
 
 }
 
+
 export const login = async (req, res) => {
-    res.send("login page");
+    const {email,password} = req.body
+
+    try {
+        const user = await User.findOne({email})
+        if(!user) {
+            throw new Error("User not found")
+        }
+
+        //check for hashed password 
+        const isPasswordValid = await bcryptjs.compare(password,user.password)//compare the password sent by front req , with the password assigned to user found by given email
+        if(!isPasswordValid) {
+            throw new Error("Invalid Password")
+        }
+        generateTokenAndSetCookie(res,user._id)
+        //we generate tokens upon login and sign up , for the next visit
+        //we need these tokens in future requests in the app that require authentication , using the interceptors in frontend and backend
+        user.lastLogin = new Date()//date object
+        //Date.now() stores numeric values
+
+        res.status(200).json({success: true, message: "Logged in successfully", user:{...user._doc, password:undefined}})
+    }
+    catch (error){
+        console.log("Error in login", error);
+        
+        res.status(400).json({success:false,message:error.message})
+    }
 }
 
 export const logout = async (req, res) => {
-    res.send("logout page");
+    //just clear cookies in the response object
+    res.clearCookie('token')//thats its name in generate token method
+    res.status(200).json({success: true, message:"Logged out successfully"})
+}
+
+export const forgotPassword = async (req,res)=>{
+    const {email} = req.body // what user provides
+    try {
+        const user = await User.findOne({email})
+        if(!user) {
+            throw new Error("User not found")
+        }
+        //generate a reset token // will be added to the user document in mongoDB , in our schema we defined it but its not required 
+        const resetToken = crypto.randomBytes(20).toString("hex")//this token is for password reset situations and similar , we use jwt for authentication related requests throughout the application
+
+        const resetTokenExpiresAt=Date.now()+60*60*1000;
+
+        user.resetPasswordToken=resetToken;
+        user.resetPasswordExpiresAt=resetTokenExpiresAt;
+
+        await user.save()
+        //send a password reset email//must be await
+
+        await sendPasswordResetEmail(user.email,`${process.env.CLIENT_URL}/reset-password/${resetToken}`)
+        //a more secure way to make the URL accessible via the unique reset token only
+
+        res.status(200).json({success: true, message:"Reset Password Email Sent"})
+        //send a password reset email//must be await
+
+    }
+    catch(error){
+        res.status(400).json({success:false,message:error.message})
+    }
+
+    /**
+     * Use Case (Password Reset):
+
+User requests a password reset.
+The server generates a unique resetToken using this code.
+The resetToken is stored in the database and sent to the user's email in a reset link.
+The user clicks the link, which includes the resetToken.
+The server verifies the resetToken against the database.
+If valid, the user is allowed to set a new password.
+     */
+}
+
+export const resetPassword = async (req,res)=>{
+    try {
+        const {token}=req.params
+        const {password} = req.body
+
+        const user = await User.findOne({resetPasswordToken:token
+            //compares the token from params(in the url) with the token in user document 
+            ,
+            resetPasswordExpiresAt: {$gte: Date.now()}})
+        
+            if(!user) {
+                throw new Error("Invalid Token or Token expired")
+            }
+
+            const hashedPassword=await bcryptjs.hash(password,10)
+            user.password=hashedPassword
+            //delete the reset token after password is reset
+            user.resetPasswordToken=undefined
+            user.resetPasswordExpiresAt=undefined
+
+
+            await user.save()
+
+            await sendResetSuccessEmail(user.email)
+
+            res.status(200).json({
+                success: true, message:"Password Reset Successfully"
+            })
+
+        } catch (error) {
+        res.status(400).json({success:false,message:error.message})
+    }
+}
+
+export const checkAuth=async (req, res) => {
+    try {
+        const user = await User.findById(req.userId)
+        //or         const user = await User.findById(req.userId).select("-password")
+        if(!user) {
+            throw new Error("User not found")
+
+           
+        }
+        res.status(200).json({success:true,user:{
+            ...user._doc,
+            password:undefined
+        }})
+    } catch (error) {
+        res.status(400).json({success:false,message:error.message})
+    }
 }
 
 
