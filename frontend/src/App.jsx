@@ -10,6 +10,8 @@ import { useAuthStore } from "./store/authStore"
 import { useEffect } from "react"
 import DashboardPage from "./pages/DashboardPage"
 import LoadingSpinner from "./components/LoadingSpinner"
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"
+import ResetPasswordPage from "./pages/ResetPasswordPage"
 //TODO: protecting routes
 
 
@@ -29,7 +31,7 @@ const ProtectedRoute =({children})=>{
   /**In Essence: The return statement acts as a switch. It determines which branch of logic should be executed and, therefore, what should be rendered based on the user's authentication and verification status. */
 }
 
-
+//TODO: redicrect already authenticated users
 //redirect authenticated users to homepage
 const RedirectAuthenticatedUser= ({children})=>{
   const {isAuthenticated,user}=useAuthStore()
@@ -43,16 +45,16 @@ const RedirectAuthenticatedUser= ({children})=>{
 function App() {
   //TODO: necessary to check all the time if the user is authenticated , dependecy could be just [] //on mount
   
-  const {isCheckingAuth,checkAuth,isAuthenticated,user}=useAuthStore()
-
+  const {isCheckingAuth,checkAuth}=useAuthStore()
+// TODO: simple function , just sends a get req to Back end , and receives a response containing user data
   useEffect(()=>{
     checkAuth()
 
   },[checkAuth])
-  console.log("isAuthenticated",isAuthenticated);
-  console.log("user",user);
+ 
   
   if (isCheckingAuth){
+
     return <LoadingSpinner/>
   }
   return (
@@ -82,7 +84,17 @@ function App() {
           <Route path="/verify-email" element={<EmailVerification/>}/>
           
 
+          <Route path="/forgot-password" element={<RedirectAuthenticatedUser>
+            <ForgotPasswordPage/>
+          </RedirectAuthenticatedUser>}/>
 
+          {/* TODO: dynamic segment , use useParams hook to destructure this value */}
+          {/* how this dynamic segment works : we destructure the token , and password in frontend , send it in a req to the reset-password end point to the backend , the backend checks if there exists a user with the same token in their DB document (which is created and added to the user in forgot-password endpoint) , if so return a success  message ,and backend hashes the new password and saves it to user, if not return an error message, */}
+          <Route path="/reset-password/:token" element={<RedirectAuthenticatedUser>
+            <ResetPasswordPage/>
+          </RedirectAuthenticatedUser>}/>
+          
+          <Route path="*" element={<Navigate to="/" replace/>}/>
       </Routes>
 
       <Toaster/>

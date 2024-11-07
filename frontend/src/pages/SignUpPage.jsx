@@ -17,6 +17,7 @@ const SignUpPage = () => {
 
     const handleSignUp = async(e) => {
         e.preventDefault();
+        //TODO: when calling the api call func , its always in an async itself and await before it
         try {
             await signup(email,password,name)
             navigate("/verify-email")//no API_URL needed

@@ -7,12 +7,13 @@ const API_URL="http://localhost:5000/api/auth"
 axios.defaults.withCredentials=true//very important , this modification allows us to put the cookies in the request header
 
 //whats in this state is very important
-//TODO:
+//TODO: api calls functions are in this store (state management solution) and are always async
 export const useAuthStore=create((set)=>({
     user:null,
     isAuthenticated:false,
     error:null,
     isLoading:false,
+    message:null,
     isCheckingAuth:true,//when refreshing the page we quickly check if the user is authenticated
 
     signup:async(email, password,name)=>{
@@ -63,6 +64,7 @@ export const useAuthStore=create((set)=>({
         }
 
     },
+    //TODO: in a useEffect in APP.jsx
     checkAuth: async ()=>{
         // await new Promise((resolve)=>setTimeout(resolve,5000))
         //mimick loading
@@ -73,5 +75,31 @@ export const useAuthStore=create((set)=>({
         } catch (error) {
             set({error:null,isCheckingAuth:false,isAuthenticated:false})
         }
-    }//used in app.jsx for auth checking and protecting routes
+    },//used in app.jsx for auth checking and protecting routes
+    forgotPassword: async (email) => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.post(`${API_URL}/forgot-password`, { email });
+			set({ message: response.data.message, isLoading: false });
+		} catch (error) {
+			set({
+				isLoading: false,
+				error: error.response.data.message || "Error sending reset password email",
+			});
+			throw error;
+		}
+	},
+	resetPassword: async (token, password) => {
+		set({ isLoading: true, error: null });
+		try {
+			const response = await axios.post(`${API_URL}/reset-password/${token}`, { password });
+			set({ message: response.data.message, isLoading: false });
+		} catch (error) {
+			set({
+				isLoading: false,
+				error: error.response.data.message || "Error resetting password",
+			});
+			throw error;
+		}
+	},
 }))

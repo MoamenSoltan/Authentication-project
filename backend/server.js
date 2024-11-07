@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.route.js';
 import cookieParser from 'cookie-parser';
 import cors from "cors"
 import dotenv from 'dotenv';
+import path from "path"
 dotenv.config()
 // to be able to read the environment variables , by default its not accessible
 
@@ -15,7 +16,7 @@ dotenv.config()
 
  const app = express();
  const PORT=process.env.PORT || 5000
-
+ const __dirname = path.resolve()
  //we used nodemon to not be forced to restart the server every time
  //use npm run dev 
 
@@ -25,6 +26,16 @@ dotenv.config()
  app.use("/api/auth",authRoutes)
   //this line means that we prefex all our routes from authRoutes with /api/auth
 
+
+//deployment
+  if(process.env.NODE_ENV === 'production'){
+   app.use(express.static(path.join(__dirname,"/frontend/dist")))
+
+   app.get("*",(req,res)=>{
+     res.sendFile(path.resolve(__dirname,"frontend","dist","index.html"));
+   })
+   //the frontend folder should be built before deploying to production, using npm run build
+  }
 
  app.listen(PORT,()=>{
     connectDB()
