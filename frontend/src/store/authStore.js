@@ -1,7 +1,7 @@
 import {create} from "zustand"//its our state management solution
 import axios from "axios"
 
-const API_URL="http://localhost:5000/api/auth"
+const API_URL=import.meta.env.MODE==="development"? "http://localhost:5000/api/auth":"/api/auth"
 
 //TODO: 
 axios.defaults.withCredentials=true//very important , this modification allows us to put the cookies in the request header
