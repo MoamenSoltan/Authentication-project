@@ -1,6 +1,7 @@
-Authentication project
 
-A Fullstack MERN app mainly focused on authentication
+# Authentication Project
+
+A Fullstack MERN app mainly focused on authentication.
 
 ## Getting Started
 
@@ -16,14 +17,31 @@ Follow these instructions to set up and run the project on your local machine.
 1. Clone the repository:
    ```bash
    git clone https://github.com/MoamenSoltan/Authentication-project/
+   ```
 
-2. Run the server using the command :
+2. Navigate to the project directory:
+   ```bash
+   cd Authentication-project
+   ```
+
+3. Run the server using the command:
+   ```bash
    npm run dev
+   ```
 
-
-4. Navigate to frontend folder
+4. Navigate to the frontend folder:
+   ```bash
    cd ./frontend
+   ```
 
+5. Start the React app:
+   ```bash
+   npm run dev
+   ```
 
-5- run the react app 
-  npm run dev
+## Features
+
+- User authentication and authorization
+- Secure JWT token handling
+- Includes protected routes for authorized users only
+
