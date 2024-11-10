@@ -18,6 +18,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage"
 //protect routes that require authentication
 
 const ProtectedRoute =({children})=>{
+  //TODO: isAuthenticated is a global state , while isVerified is a value in the user document . accessed with user.isVerified , isAuthenticated is changed to true after successful api calls such as signup , while isVerified is only manipulated by backend
   const {user,isAuthenticated}=useAuthStore()
   if(!isAuthenticated){
     return <Navigate to={"/login"} replace/>//only this component would be rendered 

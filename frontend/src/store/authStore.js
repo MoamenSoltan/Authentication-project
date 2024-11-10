@@ -73,7 +73,13 @@ export const useAuthStore=create((set)=>({
             const response = await axios.get(`${API_URL}/check-auth`)
             set({user:response.data.user,isAuthenticated:true,isCheckingAuth:false,error:null}) 
         } catch (error) {
-            set({error:null,isCheckingAuth:false,isAuthenticated:false})
+            console.error("Error during authentication check:", error);
+
+            set({ 
+                error: error?.response?.data?.message || "An unknown error occurred",
+                isCheckingAuth: false,
+                isAuthenticated: false 
+            });
         }
     },//used in app.jsx for auth checking and protecting routes
     forgotPassword: async (email) => {
